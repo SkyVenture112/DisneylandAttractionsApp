@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -136,24 +137,31 @@ val attractions = listOf(
 
 // Creates the display cards for each attraction
 @Composable
-fun AttractionCard(attraction: Attraction, modifier : Modifier = Modifier) {
-    Card(modifier = modifier) {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(attraction.image)
-                .build(),
-            contentDescription = attraction.name,
-            contentScale = ContentScale.Crop,
-            modifier = modifier
-        )
-        Text(
-            text = attraction.name,
-            modifier = Modifier.padding(16.dp),
-            style = MaterialTheme.typography.headlineLarge
-        )
+fun AttractionCard(attraction: Attraction, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier,
+    ) {
+        Column {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(attraction.image)
+                    .build(),
+                contentDescription = attraction.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .height(120.dp)
+                    .fillMaxWidth()
+            )
 
+            Text(
+                text = attraction.name,
+                modifier = Modifier
+                    .padding(12.dp),
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
     }
-
 }
 
 // Top bar with Sleeping Beauty castle icon
@@ -173,7 +181,7 @@ fun AppTopBar(modifier : Modifier = Modifier) {
         },
         modifier = modifier,
         colors = centerAlignedTopAppBarColors(
-            containerColor = Color(0xFF769CDF)
+            containerColor = Color(0xFF4F83C4)
         )
     )
 }
@@ -210,7 +218,10 @@ fun FilterMenu(
             },
             colors = OutlinedTextFieldDefaults.colors(),
             textStyle = MaterialTheme.typography.displayMedium,
-            modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable, enabled = true)
+            modifier = Modifier
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable, enabled = true)
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
         )
 
         ExposedDropdownMenu(

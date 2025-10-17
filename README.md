@@ -4,7 +4,8 @@ A fun project I've been working on to more thoroughly learn Jetpack Compose and 
 It also implements the Queue Times API using Retrofit to display current attraction wait times and statuses.
 
 
-<img width="351" height="732" alt="image" src="https://github.com/user-attachments/assets/b8eeb4b6-247a-4de5-be9c-b37ef021899e" />
+<br></br>
 
-
-
+<p align="center">
+  <img width="351" height="732" alt="ui_screenshot" src="https://github.com/user-attachments/assets/b8eeb4b6-247a-4de5-be9c-b37ef021899e" />
+</p>

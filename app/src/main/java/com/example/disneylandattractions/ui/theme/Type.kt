@@ -50,12 +50,28 @@ val Typography = Typography(
         letterSpacing = 0.5.sp
     ),
 
+    labelMedium = TextStyle(
+        fontFamily = Nunito,
+        fontSize = 23.sp,
+        lineHeight = 34.sp,
+        letterSpacing = 0.5.sp
+    ),
+
+    headlineMedium = TextStyle(
+        fontFamily = MouseMemoirs,
+        fontWeight = FontWeight.Bold,
+        fontSize = 20.sp,
+        lineHeight = 34.sp,
+        letterSpacing = 0.75.sp
+    ),
+
     headlineLarge = TextStyle(
         fontFamily = MouseMemoirs,
         fontWeight = FontWeight.Bold,
         fontSize = 28.sp,
-        letterSpacing = 0.75.sp,
-        lineHeight = 34.sp
+        lineHeight = 34.sp,
+        letterSpacing = 0.75.sp
+
     )
 
 )

@@ -35,7 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.TopAppBarDefaults.centerAlignedTopAppBarColors
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.Alignment
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -44,9 +44,45 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.http.GET
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import com.example.disneylandattractions.ui.theme.DisneylandAttractionsTheme
 
+// Data classes for parsing content from the Queue Times API
+data class QueueTimes(
+    val lands: List<Land>
+)
 
+data class Land(
+    val id: Int,
+    val name: String,
+    val rides: List<Ride>
+)
+
+data class Ride(
+    val id: Int,
+    val name: String,
+    val is_open: Boolean,
+    val wait_time: Int,
+    val last_updated: String
+)
+
+interface QueueTimesApi {
+    @GET("parks/16/queue_times.json")
+    suspend fun getDisneylandTimes(): QueueTimes
+
+    @GET("parks/17/queue_times.json")
+    suspend fun getCaliforniaAdventureTimes(): QueueTimes
+}
 
 // Attraction class
 data class Attraction(
@@ -79,6 +115,12 @@ val attractions = listOf(
         "https://cdn1.parksmedia.wdprapps.disney.com/resize/mwImage/1/630/354/75/vision-dam/digital/parks-platform/parks-global-assets/disneyland/events/halloween/Spellbinding_Thrills-Haunted_Mansion_Holiday-16x9.jpg?2024-06-17T18:34:56+00:00"),
 
     Attraction(
+        "It's a Small World",
+        "Disneyland Park",
+        "All Year",
+        "https://cdn1.parksmedia.wdprapps.disney.com/resize/mwImage/1/1600/900/75/dam/disneyland/attractions/disneyland/its-a-small-world/small-world-exterior-16x9.jpg?1747179581005"),
+
+    Attraction(
         "It's a Small World Holiday",
         "Disneyland Park",
         "Christmas",
@@ -104,13 +146,20 @@ val attractions = listOf(
         "https://cdn1.parksmedia.wdprapps.disney.com/resize/mwImage/1/630/354/75/dam/disneyland/destinations/disney-california-adventure/pixar-pier/incredicoaster-guests-16x9.jpg?1699631823973"),
 
     Attraction(
+        "Goofy's Sky School",
+        "Disney California Adventure",
+        "All Year",
+        "https://cdn1.parksmedia.wdprapps.disney.com/resize/mwImage/1/1600/900/75/dam/wdpro-assets/dlr/parks-and-tickets/attractions/disney-california-adventure/goofys-sky-school/goofys-sky-school-00.jpg?1721799816597"),
+
+
+    Attraction(
         "Pixar Pal-A-Round",
         "Disney California Adventure",
         "All Year",
         "https://cdn1.parksmedia.wdprapps.disney.com/resize/mwImage/1/630/354/75/dam/disneyland/destinations/disney-california-adventure/pixar-pier/pixar-pal-around-night-16x9.jpg?1758287816671"),
 
     Attraction(
-        "Toy Story Midway Mania",
+        "Toy Story Midway Mania!",
         "Disney California Adventure",
         "All Year",
         "https://cdn1.parksmedia.wdprapps.disney.com/resize/mwImage/1/630/354/75/vision-dam/digital/parks-platform/parks-global-assets/disneyland/attractions/toy-story-midway-mania/20240920_RH_069-16x9.jpg?2025-08-19T00:52:49+00:00"),
@@ -128,16 +177,26 @@ val attractions = listOf(
         "https://cdn1.parksmedia.wdprapps.disney.com/resize/mwImage/1/630/354/75/dam/disneyland/attractions/disneyland/snow-whites-enchanted-wish/snow-whites-echanted-wish-dopey-16x9.jpg?1699631846547"),
 
     Attraction(
-        "Ariel's Undersea Adventure",
+        "The Little Mermaid - Ariel's Undersea Adventure",
         "Disney California Adventure",
         "All Year",
         "https://cdn1.parksmedia.wdprapps.disney.com/resize/mwImage/1/480/1280/90/media/disneyparksjapan-prod/disneyparksjapan_v0001/1/media/dlr/attractions/little-mermaid-ariels-undersea-adventure-00.jpg")
     )
 
+/* Helps map attraction names to holiday overlays or other
+weird naming schemes */
+
+fun getApiName(attraction: Attraction): String {
+    return when (attraction.name) {
+        "Pixar Pal-A-Round" -> "Pixar Pal-A-Round – Swinging"
+        "It's a Small World", "It's a Small World Holiday" -> "\"it's a small world\""
+        else -> attraction.name
+    }
+}
 
 // Creates the display cards for each attraction
 @Composable
-fun AttractionCard(attraction: Attraction, modifier: Modifier = Modifier) {
+fun AttractionCard(attraction: Attraction, waitTimes: Map<String, Int>, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier,
     ) {
@@ -160,6 +219,28 @@ fun AttractionCard(attraction: Attraction, modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
+
+            val apiName = getApiName(attraction)
+            val time = waitTimes[apiName.lowercase()]
+
+            Text(
+                text = buildAnnotatedString {
+                    append("Wait Time: ")
+
+                    if (time != null) {
+                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append("$time minutes")
+                        }
+                    } else {
+                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append("Closed")
+                        }
+                    }
+                },
+                modifier = Modifier.padding(start = 12.dp, bottom = 12.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelMedium
+            )
         }
     }
 }
@@ -180,7 +261,7 @@ fun AppTopBar(modifier : Modifier = Modifier) {
             }
         },
         modifier = modifier,
-        colors = centerAlignedTopAppBarColors(
+        colors = TopAppBarDefaults.topAppBarColors(
             containerColor = Color(0xFF4F83C4)
         )
     )
@@ -249,6 +330,7 @@ fun FilterMenu(
 // Generates the dropdown menus and card grid, and also implements the filter logic
 @Composable
 fun DisneylandAttractionsApp(modifier: Modifier = Modifier) {
+
     var selectedPark by remember { mutableStateOf("All Parks") }
     var selectedSeason by remember { mutableStateOf("All Year") }
 
@@ -264,12 +346,37 @@ fun DisneylandAttractionsApp(modifier: Modifier = Modifier) {
         "Christmas"
     )
 
-    val filteredAttractions = attractions.filter { attraction ->
-        (selectedPark == "All Parks" || attraction.park == selectedPark) &&
-                (
-                        (selectedSeason == "All Year" && attraction.season == "All Year") ||
-                                (selectedSeason != "All Year" && attraction.season == selectedSeason)
-                        )
+    val filteredAttractions = attractions.filter {
+        attraction -> (selectedPark == "All Parks" || attraction.park == selectedPark) &&
+                ((selectedSeason == "All Year" && attraction.season == "All Year") ||
+                        (selectedSeason != "All Year" && attraction.season == selectedSeason))
+    }
+
+    val api = remember {
+        Retrofit.Builder()
+            .baseUrl("https://queue-times.com/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(QueueTimesApi::class.java)
+    }
+
+    var waitTimes by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+
+    LaunchedEffect(Unit) {
+        try {
+            coroutineScope {
+                val dlDeferred = async { api.getDisneylandTimes() }
+                val caDeferred = async { api.getCaliforniaAdventureTimes() }
+                val results = awaitAll(dlDeferred, caDeferred)
+
+                val allRides = results.flatMap { it.lands.flatMap { land -> land.rides } }
+
+                waitTimes = allRides
+                    .filter { it.is_open }
+                    .associate { it.name.lowercase() to it.wait_time }
+            }
+        } catch (e: Exception) {
+        }
     }
 
     Scaffold(
@@ -281,37 +388,41 @@ fun DisneylandAttractionsApp(modifier: Modifier = Modifier) {
             modifier = modifier
                 .padding(innerPadding)
                 .padding(8.dp)
+                .fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(modifier = Modifier.padding(8.dp)) {
-                FilterMenu(
-                    selectedValue = selectedPark,
-                    options = parkOptions,
-                    label = "Select Park",
-                    onValueChangedEvent = { selectedPark = it },
-                    modifier = Modifier.weight(1f)
-                )
+            Column {
+                Row(modifier = Modifier.padding(8.dp)) {
+                    FilterMenu(
+                        selectedValue = selectedPark,
+                        options = parkOptions,
+                        label = "Select Park",
+                        onValueChangedEvent = { selectedPark = it },
+                        modifier = Modifier.weight(1f)
+                    )
 
-                Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
 
-                FilterMenu(
-                    selectedValue = selectedSeason,
-                    options = seasonOptions,
-                    label = "Select Season",
-                    onValueChangedEvent = { selectedSeason = it },
-                    modifier = Modifier.weight(1f)
-                )
-            }
+                    FilterMenu(
+                        selectedValue = selectedSeason,
+                        options = seasonOptions,
+                        label = "Select Season",
+                        onValueChangedEvent = { selectedSeason = it },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(15.dp),
-                horizontalArrangement = Arrangement.spacedBy(15.dp)
-            ) {
-                items(filteredAttractions) { attraction ->
-                    AttractionCard(attraction)
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(15.dp),
+                    horizontalArrangement = Arrangement.spacedBy(15.dp)
+                ) {
+                    items(filteredAttractions) { attraction ->
+                        AttractionCard(attraction = attraction, waitTimes = waitTimes)
+                    }
                 }
             }
         }

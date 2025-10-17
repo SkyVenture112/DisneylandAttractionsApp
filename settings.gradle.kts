@@ -1,8 +1,7 @@
 pluginManagement {
     repositories {
         google {
-            content {
-                includeGroupByRegex("com\\.android.*")
+            content {includeGroupByRegex("com\\.android.*")
                 includeGroupByRegex("com\\.google.*")
                 includeGroupByRegex("androidx.*")
             }
@@ -21,4 +20,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "DisneylandAttractions"
 include(":app")
- 

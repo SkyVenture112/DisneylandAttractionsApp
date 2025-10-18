@@ -55,34 +55,9 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
+import com.example.disneylandattractions.data.QueueTimes
 import com.example.disneylandattractions.ui.theme.DisneylandAttractionsTheme
 
-// Data classes for parsing content from the Queue Times API
-data class QueueTimes(
-    val lands: List<Land>
-)
-
-data class Land(
-    val id: Int,
-    val name: String,
-    val rides: List<Ride>
-)
-
-data class Ride(
-    val id: Int,
-    val name: String,
-    val is_open: Boolean,
-    val wait_time: Int,
-    val last_updated: String
-)
-
-interface QueueTimesApi {
-    @GET("parks/16/queue_times.json")
-    suspend fun getDisneylandTimes(): QueueTimes
-
-    @GET("parks/17/queue_times.json")
-    suspend fun getCaliforniaAdventureTimes(): QueueTimes
-}
 
 // Attraction class
 data class Attraction(
@@ -181,7 +156,15 @@ val attractions = listOf(
         "Disney California Adventure",
         "All Year",
         "https://cdn1.parksmedia.wdprapps.disney.com/resize/mwImage/1/480/1280/90/media/disneyparksjapan-prod/disneyparksjapan_v0001/1/media/dlr/attractions/little-mermaid-ariels-undersea-adventure-00.jpg")
-    )
+)
+
+interface QueueTimesApi {
+    @GET("parks/16/queue_times.json")
+    suspend fun getDisneylandTimes(): QueueTimes
+
+    @GET("parks/17/queue_times.json")
+    suspend fun getCaliforniaAdventureTimes(): QueueTimes
+}
 
 /* Helps map attraction names to holiday overlays or other
 weird naming schemes */
@@ -293,7 +276,7 @@ fun FilterMenu(
                 Text(
                     text = label,
                     style = MaterialTheme.typography.displayMedium
-            ) },
+                ) },
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
             },
@@ -347,9 +330,9 @@ fun DisneylandAttractionsApp(modifier: Modifier = Modifier) {
     )
 
     val filteredAttractions = attractions.filter {
-        attraction -> (selectedPark == "All Parks" || attraction.park == selectedPark) &&
-                ((selectedSeason == "All Year" && attraction.season == "All Year") ||
-                        (selectedSeason != "All Year" && attraction.season == selectedSeason))
+            attraction -> (selectedPark == "All Parks" || attraction.park == selectedPark) &&
+            ((selectedSeason == "All Year" && attraction.season == "All Year") ||
+                    (selectedSeason != "All Year" && attraction.season == selectedSeason))
     }
 
     val api = remember {
@@ -372,8 +355,8 @@ fun DisneylandAttractionsApp(modifier: Modifier = Modifier) {
                 val allRides = results.flatMap { it.lands.flatMap { land -> land.rides } }
 
                 waitTimes = allRides
-                    .filter { it.is_open }
-                    .associate { it.name.lowercase() to it.wait_time }
+                    .filter { it.isOpen }
+                    .associate { it.name.lowercase() to it.waitTime }
             }
         } catch (e: Exception) {
         }

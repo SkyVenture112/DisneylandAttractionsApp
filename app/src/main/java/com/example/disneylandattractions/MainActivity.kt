@@ -69,7 +69,6 @@ data class Attraction(
 
 
 // List of attractions
-
 val attractions = listOf(
     Attraction(
         "Space Mountain",
@@ -316,6 +315,7 @@ fun DisneylandAttractionsApp(modifier: Modifier = Modifier) {
 
     var selectedPark by remember { mutableStateOf("All Parks") }
     var selectedSeason by remember { mutableStateOf("All Year") }
+    var errorMessage: String? = null
 
     val parkOptions = listOf(
         "All Parks",
@@ -349,8 +349,8 @@ fun DisneylandAttractionsApp(modifier: Modifier = Modifier) {
         try {
             coroutineScope {
                 val dlDeferred = async { api.getDisneylandTimes() }
-                val caDeferred = async { api.getCaliforniaAdventureTimes() }
-                val results = awaitAll(dlDeferred, caDeferred)
+                val dcaDeferred = async { api.getCaliforniaAdventureTimes() }
+                val results = awaitAll(dlDeferred, dcaDeferred)
 
                 val allRides = results.flatMap { it.lands.flatMap { land -> land.rides } }
 
@@ -359,6 +359,8 @@ fun DisneylandAttractionsApp(modifier: Modifier = Modifier) {
                     .associate { it.name.lowercase() to it.waitTime }
             }
         } catch (e: Exception) {
+            waitTimes = emptyMap()
+            errorMessage = e.message
         }
     }
 
@@ -375,6 +377,16 @@ fun DisneylandAttractionsApp(modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Column {
+                errorMessage?.let {
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                    )
+                }
                 Row(modifier = Modifier.padding(8.dp)) {
                     FilterMenu(
                         selectedValue = selectedPark,
